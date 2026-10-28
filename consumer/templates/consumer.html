@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OCI Queue • Consumidor</title><link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="shell">
+<header>
+ <div><span class="eyebrow">ORACLE CLOUD INFRASTRUCTURE</span><h1>Consumidor da Fila</h1>
+ <p>Long polling, processamento e confirmação das mensagens.</p></div>
+ <span id="conn" class="badge {{'green' if state.connected else 'red'}}">{{'CONECTADO' if state.connected else 'DESCONECTADO'}}</span>
+</header>
+
+<section class="metrics">
+ <div class="metric"><b id="received">{{metrics.received}}</b><span>Recebimentos</span></div>
+ <div class="metric"><b id="processed">{{metrics.processed}}</b><span>Processados</span></div>
+ <div class="metric"><b id="failed">{{metrics.failed}}</b><span>Falhas</span></div>
+</section>
+
+<section class="card">
+ <div class="toolbar"><div><h2>Processamento</h2><p id="poll">Último polling: {{state.last_poll or '-'}}</p></div>
+ <button id="toggle" onclick="toggleConsumer()">{{'Pausar consumidor' if state.running else 'Iniciar consumidor'}}</button></div>
+ <div class="notice">Em caso de falha simulada, a mensagem não é excluída. Depois do timeout de visibilidade, ela pode voltar a ser entregue.</div>
+ <div id="events">
+ {% for e in events %}
+   <div class="event"><strong>{{e.order_id or "-"}}</strong><span class="status {{e.event_type|lower}}">{{e.event_type}}</span><small>{{e.detail}}</small></div>
+ {% endfor %}
+ </div>
+</section>
+</div>
+<script>
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function refresh(){
+ const r=await fetch('/api/status'); const d=await r.json();
+ received.textContent=d.metrics.received; processed.textContent=d.metrics.processed; failed.textContent=d.metrics.failed;
+ poll.textContent='Último polling: '+(d.state.last_poll||'-');
+ conn.textContent=d.state.connected?'CONECTADO':'DESCONECTADO';
+ conn.className='badge '+(d.state.connected?'green':'red');
+ toggle.textContent=d.state.running?'Pausar consumidor':'Iniciar consumidor';
+ events.innerHTML=d.events.map(e=>`<div class="event"><strong>${esc(e.order_id||'-')}</strong><span class="status ${esc(e.event_type.toLowerCase())}">${esc(e.event_type)}</span><small>${esc(e.detail)}</small></div>`).join('');
+}
+async function toggleConsumer(){await fetch('/api/toggle',{method:'POST'}); refresh();}
+setInterval(refresh,2000);
+</script>
+</body></html>

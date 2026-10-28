@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OCI Queue • Produtor</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div><span class="eyebrow">ORACLE CLOUD INFRASTRUCTURE</span><h1>Produtor de Pedidos</h1>
+    <p>Publicação assíncrona de pedidos na OCI Queue.</p></div>
+    <span class="badge blue">PRODUTOR</span>
+  </header>
+
+  <section class="metrics">
+    <div class="metric"><b id="sent">{{ metrics.sent }}</b><span>Enviados</span></div>
+    <div class="metric"><b id="processed">{{ metrics.processed }}</b><span>Processados</span></div>
+    <div class="metric"><b id="failed">{{ metrics.failed }}</b><span>Erros</span></div>
+  </section>
+
+  <main class="grid">
+    <section class="card">
+      <h2>Novo pedido</h2>
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for category,msg in msgs %}<div class="flash {{category}}">{{msg}}</div>{% endfor %}
+      {% endwith %}
+      <form method="post" action="/pedido">
+        <label>Cliente<input name="cliente" placeholder="Ex.: Felipe Bento" required></label>
+        <label>Produto<input name="produto" placeholder="Ex.: Teclado mecânico" required></label>
+        <div class="row">
+          <label>Quantidade<input type="number" name="quantidade" min="1" value="1" required></label>
+          <label>Prioridade<select name="prioridade"><option>normal</option><option>alta</option><option>baixa</option></select></label>
+        </div>
+        <label class="check"><input type="checkbox" name="simular_erro"> Simular falha no consumidor</label>
+        <button>Enviar para OCI Queue →</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Fluxo</h2>
+      <div class="flow"><span>Formulário</span><i>→</i><span>OCI Queue</span><i>→</i><span>Consumidor</span></div>
+      <h2>Eventos recentes</h2>
+      <div id="events">
+      {% for e in events %}
+        <div class="event"><strong>{{e.order_id or "-"}}</strong><span class="status {{e.event_type|lower}}">{{e.event_type}}</span><small>{{e.detail}}</small></div>
+      {% endfor %}
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+async function refresh(){
+ const r=await fetch('/api/status'); const d=await r.json();
+ document.querySelector('#sent').textContent=d.metrics.sent;
+ document.querySelector('#processed').textContent=d.metrics.processed;
+ document.querySelector('#failed').textContent=d.metrics.failed;
+}
+setInterval(refresh,3000);
+</script>
+</body></html>
